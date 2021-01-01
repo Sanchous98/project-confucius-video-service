@@ -1,0 +1,315 @@
+<html lang="en">
+<head>
+    <title>Agora Group Video Chat Demo</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap and Font Awesome CSS Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"
+          integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA=="
+          crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.3/css/bootstrap.min.css"
+          integrity="sha512-oc9+XSs1H243/FRN9Rw62Fn8EtxjEYWHXRvjS43YtueEewbS6ObfXcJNyohjHqVKFPoXXUxwc+q1K7Dee6vv9g=="
+          crossorigin="anonymous">
+    <style>
+        #buttons-container {
+            position: absolute;
+            z-index: 2;
+            width: 100vw;
+        }
+
+        #full-screen-video {
+            position: absolute;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #lower-video-bar {
+            height: 20vh;
+        }
+
+        #local-stream-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .remote-stream-container {
+            display: inline-block;
+        }
+
+        #remote-streams {
+            height: 100%;
+        }
+
+        #local-video {
+            position: absolute;
+            z-index: 1;
+            height: 20vh;
+            max-width: 100%;
+        }
+
+        .remote-video {
+            position: absolute;
+            z-index: 1;
+            height: 100% !important;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        #mute-overlay {
+            position: absolute;
+            z-index: 2;
+            bottom: 0;
+            left: 0;
+            color: #d9d9d9;
+            font-size: 2em;
+            padding: 0 0 3px 3px;
+            display: none;
+        }
+
+        .mute-overlay {
+            position: absolute;
+            z-index: 2;
+            top: 2px;
+            color: #d9d9d9;
+            font-size: 1.5em;
+            padding: 2px 0 0 2px;
+            display: none;
+        }
+
+        #no-local-video, .no-video-overlay {
+            position: absolute;
+            z-index: 3;
+            width: 100%;
+            top: 40%;
+            color: #cccccc;
+            font-size: 2.5em;
+            margin: 0 auto;
+            display: none;
+        }
+
+        .no-video-overlay {
+            width: 80%;
+        }
+
+        #screen-share-btn-container {
+            z-index: 99;
+        }
+    </style>
+</head>
+<body>
+<div id="container">
+    <div id="main-container">
+        <div id="screen-share-btn-container" class="col-2 float-right text-right mt-2">
+            <button id="screen-share-btn" type="button" class="btn btn-lg">
+                <i id="screen-share-icon" class="fas fa-share-square"></i>
+            </button>
+        </div>
+        <div id="buttons-container" class="row justify-content-center mt-3">
+            <div class="col-md-2 text-center">
+                <button id="mic-btn" type="button" class="btn btn-block btn-dark btn-lg">
+                    <i id="mic-icon" class="fas fa-microphone"></i>
+                </button>
+            </div>
+            <div class="col-md-2 text-center">
+                <button id="video-btn" type="button" class="btn btn-block btn-dark btn-lg">
+                    <i id="video-icon" class="fas fa-video"></i>
+                </button>
+            </div>
+            <div class="col-md-2 text-center">
+                <button id="exit-btn" type="button" class="btn btn-block btn-danger btn-lg">
+                    <i id="exit-icon" class="fas fa-phone-slash"></i>
+                </button>
+            </div>
+        </div>
+        <div id="full-screen-video"></div>
+        <div id="lower-video-bar">
+            <div id="remote-streams-container">
+                <div id="remote-streams">
+                    <!-- insert remote streams dynamically -->
+                </div>
+            </div>
+            <div id="local-stream-container">
+                <div id="local-video"></div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+<!-- CSS Includes go here -->
+<!-- JS Includes go here -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"
+        integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg=="
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.3/js/bootstrap.min.js"
+        integrity="sha512-8qmis31OQi6hIRgvkht0s6mCOittjMa9GMqtK9hes5iEQBQE/Ca6yGE5FsW36vyipGoWQswBj/QBm2JR086Rkw=="
+        crossorigin="anonymous"></script>
+<script>
+    $("#mic-btn").prop("disabled", true);
+    $("#video-btn").prop("disabled", true);
+    $("#screen-share-btn").prop("disabled", true);
+    $("#exit-btn").prop("disabled", true);
+</script>
+<script>
+    // UI buttons
+    function enableUiControls(localStream) {
+        $("#mic-btn").prop("disabled", false);
+        $("#video-btn").prop("disabled", false);
+        $("#screen-share-btn").prop("disabled", false);
+        $("#exit-btn").prop("disabled", false);
+
+        $("#mic-btn").click(function(){
+            toggleMic(localStream);
+        });
+
+        $("#video-btn").click(function(){
+            toggleVideo(localStream);
+        });
+
+        $("#screen-share-btn").click(function(){
+            toggleScreenShareBtn(); // set screen share button icon
+            $("#screen-share-btn").prop("disabled",true); // disable the button on click
+            if(screenShareActive){
+                stopScreenShare();
+            } else {
+                initScreenShare();
+            }
+        });
+
+        $("#exit-btn").click(function(){
+            console.log("so sad to see you leave the channel");
+            leaveChannel();
+        });
+
+        // keyboard listeners
+        $(document).keypress(function(e) {
+            switch (e.key) {
+                case "m":
+                    console.log("squick toggle the mic");
+                    toggleMic(localStream);
+                    break;
+                case "v":
+                    console.log("quick toggle the video");
+                    toggleVideo(localStream);
+                    break;
+                case "s":
+                    console.log("initializing screen share");
+                    toggleScreenShareBtn(); // set screen share button icon
+                    $("#screen-share-btn").prop("disabled",true); // disable the button on click
+                    if(screenShareActive){
+                        stopScreenShare();
+                    } else {
+                        initScreenShare();
+                    }
+                    break;
+                case "q":
+                    console.log("so sad to see you quit the channel");
+                    leaveChannel();
+                    break;
+                default:  // do nothing
+            }
+
+            // (for testing)
+            if(e.key === "r") {
+                window.history.back(); // quick reset
+            }
+        });
+    }
+
+    function toggleBtn(btn){
+        btn.toggleClass('btn-dark').toggleClass('btn-danger');
+    }
+
+    function toggleScreenShareBtn() {
+        $('#screen-share-btn').toggleClass('btn-danger');
+        $('#screen-share-icon').toggleClass('fa-share-square').toggleClass('fa-times-circle');
+    }
+
+    function toggleVisibility(elementID, visible) {
+        if (visible) {
+            $(elementID).attr("style", "display:block");
+        } else {
+            $(elementID).attr("style", "display:none");
+        }
+    }
+
+    function toggleMic(localStream) {
+        toggleBtn($("#mic-btn")); // toggle button colors
+        $("#mic-icon").toggleClass('fa-microphone').toggleClass('fa-microphone-slash'); // toggle the mic icon
+        const toggleStatus = $("#mic-icon").hasClass('fa-microphone');
+        localStream.getAudioTracks().forEach(track => track.enabled = toggleStatus)
+        toggleVisibility("#mute-overlay", !toggleStatus); // toggle the muted mic icon
+    }
+
+    function toggleVideo(localStream) {
+        toggleBtn($("#video-btn")); // toggle button colors
+        $("#video-icon").toggleClass('fa-video').toggleClass('fa-video-slash'); // toggle the video icon
+        const toggleStatus = $("#video-icon").hasClass('fa-video');
+        localStream.getVideoTracks().forEach(track => track.enabled = toggleStatus) // toggle the local video
+        toggleVisibility("#no-local-video", !toggleStatus); // hide the user icon when video is enabled
+    }
+</script>
+<script>
+    const streamHandler = (stream, ws) => {
+        let pc = new RTCPeerConnection();
+        pc.ontrack = event => {
+            if (event.track.kind === 'audio') return;
+
+            let el = document.createElement(event.track.kind);
+            el.srcObject = event.streams[0];
+            el.autoplay = true;
+            el.controls = true;
+            document.getElementById('remote-streams').appendChild(el);
+
+            event.track.onmute = event => {
+                el.play();
+            };
+
+            event.streams[0].onremovetrack = ({track}) => {
+                if (el.parentNode) el.parentNode.removeChild(el);
+            };
+        }
+
+        document.getElementById('local-video').srcObject = stream;
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+        pc.onicecandidate = e => {
+            if (!e.candidate) return;
+
+            ws.send(JSON.stringify({event: 'candidate', data: JSON.stringify(e.candidate)}));
+        };
+
+        ws.onclose = evt => window.alert("Websocket has closed");
+
+        ws.onmessage = evt => {
+            let msg = JSON.parse(evt.data);
+            if (!msg) return console.log('failed to parse msg');
+
+            switch (msg.event) {
+                case 'offer':
+                    let offer = JSON.parse(msg.data);
+                    if (!offer) return console.log('failed to parse answer');
+                    pc.setRemoteDescription(offer);
+                    pc.createAnswer().then(answer => {
+                        pc.setLocalDescription(answer)
+                        ws.send(JSON.stringify({event: 'answer', data: JSON.stringify(answer)}))
+                    });
+                    return;
+
+                case 'candidate':
+                    let candidate = JSON.parse(msg.data);
+                    if (!candidate) return console.log('failed to parse candidate');
+                    pc.addIceCandidate(candidate);
+            }
+        }
+
+        ws.onerror = evt => console.log("ERROR: " + evt.data);
+    };
+
+    navigator.mediaDevices.getUserMedia({video: true, audio: true})
+        .then(stream => {
+            const ws = new WebSocket("{{.}}");
+            streamHandler(stream, ws);
+            enableUiControls(stream);
+        }).catch(window.alert);
+</script>
+</html>
