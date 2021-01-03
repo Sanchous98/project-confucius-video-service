@@ -150,6 +150,7 @@
     $("#exit-btn").prop("disabled", true);
 </script>
 <script>
+    let screenShareActive = false;
     // UI buttons
     function enableUiControls(localStream) {
         $("#mic-btn").prop("disabled", false);
@@ -249,6 +250,19 @@
     }
 </script>
 <script>
+    function initScreenShare() {
+
+    }
+    function stopScreenShare() {
+
+    }
+    function leaveChannel() {
+        if(screenShareActive) {
+            stopScreenShare();
+        }
+    }
+</script>
+<script>
     const streamHandler = (stream, ws) => {
         let pc = new RTCPeerConnection();
         pc.ontrack = event => {
@@ -257,7 +271,7 @@
             let el = document.createElement(event.track.kind);
             el.srcObject = event.streams[0];
             el.autoplay = true;
-            el.controls = true;
+            el.controls = false;
             document.getElementById('remote-streams').appendChild(el);
 
             event.track.onmute = event => {

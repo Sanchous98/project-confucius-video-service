@@ -100,7 +100,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	c := &threadSafeWriter{unsafeConn, sync.Mutex{}}
 
 	// When this frame returns close the Websocket
-	defer c.Close() //nolint
+	defer c.Close()
 
 	// Create new PeerConnection
 	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{})
@@ -110,7 +110,7 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// When this frame returns close the PeerConnection
-	defer peerConnection.Close() //nolint
+	defer peerConnection.Close()
 
 	// Accept one audio and one video track incoming
 	for _, typ := range []webrtc.RTPCodecType{webrtc.RTPCodecTypeVideo, webrtc.RTPCodecTypeAudio} {
@@ -255,7 +255,7 @@ func signalPeerConnections() {
 		dispatchKeyFrame()
 	}()
 
-	attemptSync := func() (tryAgain bool) {
+	attemptSync := func() bool {
 		for i := range peerConnections {
 			if peerConnections[i].peerConnection.ConnectionState() == webrtc.PeerConnectionStateClosed {
 				peerConnections = append(peerConnections[:i], peerConnections[i+1:]...)
@@ -320,7 +320,7 @@ func signalPeerConnections() {
 			}
 		}
 
-		return
+		return false
 	}
 
 	for syncAttempt := 0; ; syncAttempt++ {
